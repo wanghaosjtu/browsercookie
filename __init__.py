@@ -95,6 +95,9 @@ class BrowserCookieLoader(object):
 
 
 class Chrome(BrowserCookieLoader):
+    def __init__(self, cookie_files=None):
+        self.APPDATA = 'Google\Chrome'
+        super(Chrome, self).__init__(cookie_files)
     def __str__(self):
         return 'chrome'
 
@@ -110,9 +113,9 @@ class Chrome(BrowserCookieLoader):
             os.path.expanduser('~/.config/google-chrome/Profile */Cookies'),
             os.path.expanduser('~/.config/vivaldi/Default/Cookies'),
             os.path.expanduser('~/.config/vivaldi/Profile */Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\Google\Chrome\User Data\Default\Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\Google\Chrome\User Data\Default\Network\Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\Google\Chrome\User Data\Profile *\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Default\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Default\Network\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Profile *\Cookies'),
             os.path.join(os.getenv('APPDATA', ''), r'..\Local\Vivaldi\User Data\Default\Cookies'),
             os.path.join(os.getenv('APPDATA', ''), r'..\Local\Vivaldi\User Data\Profile *\Cookies'),
         ]:
@@ -148,7 +151,7 @@ class Chrome(BrowserCookieLoader):
             key = PBKDF2(my_pass, salt, length, iterations)
 
         elif sys.platform == 'win32':
-            path = r'%LocalAppData%\Google\Chrome\User Data\Local State'
+            path = '%LocalAppData%\\' + self.APPDATA + '\User Data\Local State'
             path = os.path.expandvars(path)
             with open(path, 'r') as file:
                 encrypted_key = json.loads(file.read())['os_crypt']['encrypted_key']
@@ -167,6 +170,7 @@ class Chrome(BrowserCookieLoader):
                 query = 'SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value FROM cookies;'
                 if version < 10:
                     query = query.replace('is_', '')
+                con.text_factory = bytes
                 cur.execute(query)
                 for item in cur.fetchall():
                     host, path, secure, expires, name = item[:5]
@@ -219,6 +223,14 @@ class Chrome(BrowserCookieLoader):
                 except:
                     raise BrowserCookieError("Error decrypting cookie: " + str(cookiename) + " from site " + str(sitename))
             return plaintext
+
+
+class Edge(Chrome):
+    def __init__(self, cookie_files=None):
+        self.APPDATA = 'Microsoft\Edge'
+        super(Chrome, self).__init__(cookie_files)
+    def __str__(self):
+        return 'edge'
 
 
 class Firefox(BrowserCookieLoader):
@@ -433,6 +445,11 @@ def chrome(cookie_file=None):
     """Returns a cookiejar of the cookies used by Chrome
     """
     return Chrome(cookie_file).load()
+
+def edge(cookie_file=None):
+    """Returns a cookiejar of the cookies used by Edge
+    """
+    return Edge(cookie_file).load()
 
 def firefox(cookie_file=None):
     """Returns a cookiejar of the cookies and sessions used by Firefox
