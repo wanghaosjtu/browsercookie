@@ -113,9 +113,9 @@ class Chrome(BrowserCookieLoader):
             os.path.expanduser('~/.config/google-chrome/Profile */Cookies'),
             os.path.expanduser('~/.config/vivaldi/Default/Cookies'),
             os.path.expanduser('~/.config/vivaldi/Profile */Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Default\Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Default\Network\Cookies'),
-            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + '\User Data\Profile *\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + r'\User Data\Default\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + r'\User Data\Default\Network\Cookies'),
+            os.path.join(os.getenv('APPDATA', ''), r'..\Local\\' + self.APPDATA + r'\User Data\Profile *\Cookies'),
             os.path.join(os.getenv('APPDATA', ''), r'..\Local\Vivaldi\User Data\Default\Cookies'),
             os.path.join(os.getenv('APPDATA', ''), r'..\Local\Vivaldi\User Data\Profile *\Cookies'),
         ]:
@@ -151,7 +151,7 @@ class Chrome(BrowserCookieLoader):
             key = PBKDF2(my_pass, salt, length, iterations)
 
         elif sys.platform == 'win32':
-            path = '%LocalAppData%\\' + self.APPDATA + '\User Data\Local State'
+            path = '%LocalAppData%\\' + self.APPDATA + r'\User Data\Local State'
             path = os.path.expandvars(path)
             with open(path, 'r') as file:
                 encrypted_key = json.loads(file.read())['os_crypt']['encrypted_key']
@@ -170,11 +170,15 @@ class Chrome(BrowserCookieLoader):
                 query = 'SELECT host_key, path, is_secure, expires_utc, name, value, encrypted_value FROM cookies;'
                 if version < 10:
                     query = query.replace('is_', '')
-                con.text_factory = bytes
+                if sys.version_info.major <3 :
+                    con.text_factory = bytes
                 cur.execute(query)
                 for item in cur.fetchall():
                     host, path, secure, expires, name = item[:5]
-                    expires = expires /1e6  - 11644473600 # 1601/1/1 Chrome's cookies timestap's epoch starts 1601-01-01T00:00:00Z 
+                    if expires: expires = (int(expires /1e6  - 11644473600)) # 1601/1/1 Chrome's cookies timestap's epoch starts 1601-01-01T00:00:00Z 
+                    if not expires: expires = (int(time.time()) + 3600 * 24 * 7)
+                    expires = str(expires)
+                    # expires = str(int(time.time()) + 3600 * 24 * 7)
                     value = self._decrypt(item[5], item[6], item[4], item[1], key=key)
                     yield create_cookie(host, path, secure, expires, name, value)
                 con.close()
@@ -231,7 +235,7 @@ class Edge(Chrome):
         self.APPDATA = 'Microsoft\Edge'
         super(Chrome, self).__init__(cookie_files)
     def __str__(self):
-        return 'edge'
+        return 'Edg'
 
 
 class Firefox(BrowserCookieLoader):
